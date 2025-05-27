@@ -72,149 +72,6 @@
     background-color: #007BFF;
     color: white;
   }
-  input.qty-input {
-    width: 70px;
-  }
-  input.price-input {
-    width: 90px;
-  }
-  /* Responsive */
-  @media (max-width: 600px) {
-    .top-bar {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    input[type=text], select, button {
-      flex: none;
-      width: 100%;
-    }
-    table, th, td {
-      font-size: 0.9rem;
-    }
-  }
-</style>
-</head>
-<body>
-
-<h1>Catalogo Ordini</h1>
-
-<div class="top-bar">
-  <input type="text" id="nomeCliente" placeholder="Nome Cliente" />
-  <select id="categoriaFiltro"><option value="tutte">Tutte le categorie</option></select>
-  <input type="text" id="cercaProdotto" placeholder="Cerca prodotto..." />
-  <button id="generaPDFBtn">Genera PDF</button>
-</div>
-
-<table id="tabellaProdotti">
-  <thead>
-    <tr>
-      <th>Codice</th>
-      <th>Descrizione</th>
-      <th>Quantità</th>
-      <th>Prezzo</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<label for="noteCliente">Note ordine:</label>
-<textarea id="noteCliente" placeholder="Inserisci eventuali note..."></textarea>
-
-<!-- PapaParse per parsing CSV -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<!-- jsPDF per generare PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<script>
-(async () => {
-  const { jsPDF } = window.jspdf;
-
-  const tabellaBody = document.querySelector('#tabellaProdotti tbody');
-  const categoriaFiltro = document.getElementById('categoriaFiltro');
-  const cercaProdotto = document.getElementById('cercaProdotto');
-  const nomeCliente = document.getElementById('nomeCliente');
-  const noteCliente = document.getElementById('noteCliente');
-  const generaPDFBtn = document.getElementById('generaPDFBtn');
-
-  let prodotti = [];
-  let categorie = new Set();
-
-  // Funzione per caricare e parsare CSV
-  function caricaCSV(url) {…
-[17:10, 26/5/2025] Symo: <!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Catalogo Ordini</title>
-<!-- Font Poppins da Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
-<style>
-  body {
-    font-family: 'Poppins', sans-serif;
-    background: #F2F2F2;
-    margin: 0; padding: 20px;
-    color: #333;
-  }
-  h1 {
-    color: #007BFF;
-    text-align: center;
-  }
-  .top-bar {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    justify-content: center; margin-bottom: 15px;
-  }
-  input[type=text], select, textarea {
-    font-family: 'Poppins', sans-serif;
-    font-size: 1rem;
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-  }
-  input[type=text] {
-    flex: 1 1 200px;
-  }
-  select {
-    background: white;
-    color: #333;
-  }
-  textarea {
-    width: 100%;
-    min-height: 60px;
-    margin-top: 10px;
-  }
-  button {
-    background-color: #007BFF;
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    font-weight: 600;
-    font-size: 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  button:hover {
-    background-color: #0056b3;
-  }
-  button.secondary {
-    background-color: #FF7F00;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    margin-top: 15px;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-  }
-  th {
-    background-color: #007BFF;
-    color: white;
-  }
   input.qty-input, input.price-input {
     width: 80px;
   }
@@ -240,4 +97,153 @@
 <div class="top-bar">
   <input type="text" id="nomeCliente" placeholder="Nome Cliente" />
   <select id="categoriaFiltro"><option value="tutte">Tutte le categorie</option></select>
-  <input type="text" id="cercaProdotto
+  <input type="text" id="cercaProdotto" placeholder="Cerca prodotto..." />
+  <button id="generaXLSBtn" class="secondary">Genera XLS</button>
+</div>
+
+<table id="tabellaProdotti">
+  <thead>
+    <tr>
+      <th>Codice</th>
+      <th>Descrizione</th>
+      <th>Quantità</th>
+      <th>Prezzo</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<label for="noteCliente">Note ordine:</label>
+<textarea id="noteCliente" placeholder="Inserisci eventuali note..."></textarea>
+
+<!-- PapaParse per parsing CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<!-- SheetJS per generare XLS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+(async () => {
+  const tabellaBody = document.querySelector('#tabellaProdotti tbody');
+  const categoriaFiltro = document.getElementById('categoriaFiltro');
+  const cercaProdotto = document.getElementById('cercaProdotto');
+  const nomeCliente = document.getElementById('nomeCliente');
+  const noteCliente = document.getElementById('noteCliente');
+  const generaXLSBtn = document.getElementById('generaXLSBtn');
+
+  let prodotti = [];
+  let categorie = new Set();
+  let statoQuantitaPrezzo = {};
+
+  function caricaCSV(url) {
+    return new Promise((resolve, reject) => {
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => resolve(results.data),
+        error: (err) => reject(err)
+      });
+    });
+  }
+
+  function mostraProdotti() {
+    const catSelezionata = categoriaFiltro.value.toLowerCase();
+    const ricerca = cercaProdotto.value.toLowerCase();
+    tabellaBody.innerHTML = '';
+
+    prodotti.forEach(({ codice, descrizione, categoria, prezzo }) => {
+      if ((catSelezionata === 'tutte' || categoria.toLowerCase() === catSelezionata) &&
+          (descrizione.toLowerCase().includes(ricerca) || codice.toLowerCase().includes(ricerca))) {
+        
+        const idRiga = codice;
+        const riga = document.createElement('tr');
+
+        const tdCodice = document.createElement('td');
+        tdCodice.textContent = codice;
+        riga.appendChild(tdCodice);
+
+        const tdDesc = document.createElement('td');
+        tdDesc.textContent = descrizione;
+        riga.appendChild(tdDesc);
+
+        const tdQty = document.createElement('td');
+        const inputQty = document.createElement('input');
+        inputQty.type = 'text';
+        inputQty.className = 'qty-input';
+        inputQty.value = statoQuantitaPrezzo[idRiga]?.quantita || '';
+        inputQty.addEventListener('input', () => {
+          statoQuantitaPrezzo[idRiga] = statoQuantitaPrezzo[idRiga] || {};
+          statoQuantitaPrezzo[idRiga].quantita = inputQty.value;
+        });
+        tdQty.appendChild(inputQty);
+        riga.appendChild(tdQty);
+
+        const tdPrezzo = document.createElement('td');
+        const inputPrezzo = document.createElement('input');
+        inputPrezzo.type = 'text';
+        inputPrezzo.className = 'price-input';
+        inputPrezzo.placeholder = prezzo || 'P.P.';
+        inputPrezzo.value = statoQuantitaPrezzo[idRiga]?.prezzo || '';
+        inputPrezzo.addEventListener('input', () => {
+          statoQuantitaPrezzo[idRiga] = statoQuantitaPrezzo[idRiga] || {};
+          statoQuantitaPrezzo[idRiga].prezzo = inputPrezzo.value;
+        });
+        tdPrezzo.appendChild(inputPrezzo);
+        riga.appendChild(tdPrezzo);
+
+        tabellaBody.appendChild(riga);
+      }
+    });
+  }
+
+  function popolaCategorie() {
+    categoriaFiltro.innerHTML = '<option value="tutte">Tutte le categorie</option>';
+    Array.from(categorie).sort().forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.toLowerCase();
+      opt.textContent = cat;
+      categoriaFiltro.appendChild(opt);
+    });
+  }
+
+  function generaXLS() {
+    const dati = [["Cliente:", nomeCliente.value], ["Note:", noteCliente.value], [], ["Codice", "Descrizione", "Quantità", "Prezzo"]];
+    prodotti.forEach(({ codice, descrizione }) => {
+      const stato = statoQuantitaPrezzo[codice];
+      if (stato?.quantita) {
+        dati.push([
+          codice,
+          descrizione,
+          stato.quantita,
+          stato.prezzo || 'P.P.'
+        ]);
+      }
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(dati);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ordine");
+
+    const nomeFile = nomeCliente.value ? Ordine_${nomeCliente.value.replace(/\s+/g, '_')}.xlsx : 'Ordine.xlsx';
+    XLSX.writeFile(wb, nomeFile);
+  }
+
+  prodotti = await caricaCSV('catalogo.csv');
+
+  prodotti.forEach(p => {
+    if (p.categoria && p.categoria.trim() !== '') {
+      categorie.add(p.categoria.trim());
+    }
+  });
+
+  popolaCategorie();
+  mostraProdotti();
+
+  categoriaFiltro.addEventListener('change', mostraProdotti);
+  cercaProdotto.addEventListener('input', mostraProdotti);
+  generaXLSBtn.addEventListener('click', generaXLS);
+})();
+</script>
+
+</body>
+</html>
