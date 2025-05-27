@@ -4,17 +4,16 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Catalogo Ordini</title>
-<!-- Font Poppins da Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
 <style>
   body {
     font-family: 'Poppins', sans-serif;
-    background: #F2F2F2;
+    background: #FFF7F0;
     margin: 0; padding: 20px;
     color: #333;
   }
   h1 {
-    color: #007BFF;
+    color: #FF7F00;
     text-align: center;
   }
   .top-bar {
@@ -41,7 +40,7 @@
     margin-top: 10px;
   }
   button {
-    background-color: #007BFF;
+    background-color: #FF7F00;
     border: none;
     color: white;
     padding: 10px 20px;
@@ -52,10 +51,10 @@
     transition: background-color 0.3s;
   }
   button:hover {
-    background-color: #0056b3;
+    background-color: #e06b00;
   }
   button.secondary {
-    background-color: #FF7F00;
+    background-color: #007BFF;
   }
   table {
     width: 100%;
@@ -69,7 +68,7 @@
     text-align: left;
   }
   th {
-    background-color: #007BFF;
+    background-color: #FF7F00;
     color: white;
   }
   input.qty-input {
@@ -102,6 +101,7 @@
   <select id="categoriaFiltro"><option value="tutte">Tutte le categorie</option></select>
   <input type="text" id="cercaProdotto" placeholder="Cerca prodotto..." />
   <button id="generaExcelBtn">Genera Excel</button>
+  <button id="generaPdfBtn" class="secondary">Genera PDF</button>
 </div>
 
 <table id="tabellaProdotti">
@@ -119,10 +119,9 @@
 <label for="noteCliente">Note ordine:</label>
 <textarea id="noteCliente" placeholder="Inserisci eventuali note..."></textarea>
 
-<!-- PapaParse per parsing CSV -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<!-- SheetJS per generare Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 (async () => {
@@ -132,9 +131,11 @@
   const nomeCliente = document.getElementById('nomeCliente');
   const noteCliente = document.getElementById('noteCliente');
   const generaExcelBtn = document.getElementById('generaExcelBtn');
+  const generaPdfBtn = document.getElementById('generaPdfBtn');
 
   let prodotti = [];
   let categorie = new Set();
+  let datiSalvati = {};
 
   function caricaCSV(url) {
     return new Promise((resolve, reject) => {
@@ -171,15 +172,24 @@
         inputQty.type = 'text';
         inputQty.placeholder = '0 pz/ct';
         inputQty.className = 'qty-input';
-        inputQty.pattern = "\\d+\\s?(pz|ct)?";
+        inputQty.value = datiSalvati[codice]?.qty || '';
+        inputQty.addEventListener('input', () => {
+          if (!datiSalvati[codice]) datiSalvati[codice] = {};
+          datiSalvati[codice].qty = inputQty.value;
+        });
         tdQty.appendChild(inputQty);
         riga.appendChild(tdQty);
 
         const tdPrezzo = document.createElement('td');
         const inputPrezzo = document.createElement('input');
         inputPrezzo.type = 'text';
-        inputPrezzo.placeholder = prezzo ? prezzo : 'P.P.';
+        inputPrezzo.placeholder = prezzo || 'P.P.';
         inputPrezzo.className = 'price-input';
+        inputPrezzo.value = datiSalvati[codice]?.prezzo || '';
+        inputPrezzo.addEventListener('input', () => {
+          if (!datiSalvati[codice]) datiSalvati[codice] = {};
+          datiSalvati[codice].prezzo = inputPrezzo.value;
+        });
         tdPrezzo.appendChild(inputPrezzo);
         riga.appendChild(tdPrezzo);
 
@@ -208,16 +218,15 @@
     dati.push([]);
     dati.push(["Codice", "Descrizione", "Quantità", "Prezzo"]);
 
-    const righe = tabellaBody.querySelectorAll('tr');
-    righe.forEach(riga => {
-      const cells = riga.querySelectorAll('td');
-      const codice = cells[0].textContent;
-      const descrizione = cells[1].textContent;
-      const qty = cells[2].querySelector('input').value.trim() || '';
-      const prezzo = cells[3].querySelector('input').value.trim() || 'P.P.';
-
-      if (qty) {
-        dati.push([codice, descrizione, qty, prezzo]);
+    Object.keys(datiSalvati).forEach(codice => {
+      const prod = prodotti.find(p => p.codice === codice);
+      if (prod && datiSalvati[codice].qty) {
+        dati.push([
+          codice,
+          prod.descrizione,
+          datiSalvati[codice].qty,
+          datiSalvati[codice].prezzo || prod.prezzo || 'P.P.'
+        ]);
       }
     });
 
@@ -228,7 +237,31 @@
     XLSX.writeFile(wb, `Ordine_${cliente.replace(/\s+/g, '_')}.xlsx`);
   }
 
-  prodotti = await caricaCSV('catalogo.csv');
+  function generaPdf() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 10;
+    doc.text(`Ordine per: ${nomeCliente.value}`, 10, y);
+    y += 10;
+    if (noteCliente.value) {
+      doc.text(`Note: ${noteCliente.value}`, 10, y);
+      y += 10;
+    }
+    doc.text("Codice | Descrizione | Quantità | Prezzo", 10, y);
+    y += 10;
+
+    Object.keys(datiSalvati).forEach(codice => {
+      const prod = prodotti.find(p => p.codice === codice);
+      if (prod && datiSalvati[codice].qty) {
+        doc.text(`${codice} | ${prod.descrizione} | ${datiSalvati[codice].qty} | ${datiSalvati[codice].prezzo || prod.prezzo || 'P.P.'}`, 10, y);
+        y += 10;
+      }
+    });
+
+    doc.save(`Ordine_${nomeCliente.value.replace(/\s+/g, '_')}.pdf`);
+  }
+
+  prodotti = await caricaCSV('https://raw.githubusercontent.com/mosynaa/ordinecil/main/catalogo.csv');
   prodotti.forEach(p => {
     if(p.categoria && p.categoria.trim() !== '') {
       categorie.add(p.categoria.trim());
@@ -240,6 +273,7 @@
   categoriaFiltro.addEventListener('change', mostraProdotti);
   cercaProdotto.addEventListener('input', mostraProdotti);
   generaExcelBtn.addEventListener('click', generaExcel);
+  generaPdfBtn.addEventListener('click', generaPdf);
 })();
 </script>
 
