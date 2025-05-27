@@ -228,7 +228,7 @@
     XLSX.writeFile(wb, nomeFile);
   }
 
-  prodotti = await caricaCSV('catalogo.csv');
+  prodotti = await caricaCSV('https://raw.githubusercontent.com/mosynaa/ordinecil/refs/heads/main/catalogo.csv');
 
   prodotti.forEach(p => {
     if (p.categoria && p.categoria.trim() !== '') {
