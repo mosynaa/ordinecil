@@ -248,7 +248,7 @@
     XLSX.utils.book_append_sheet(wb, ws, "Ordine");
 
     // Scarica file
-    XLSX.writeFile(wb, Ordine_${(nomeCliente.value.trim() || "cliente").replace(/\s+/g,'_')}.xlsx);
+    XLSX.writeFile(wb, `Ordine_${(nomeCliente.value.trim() || "cliente").replace(/\s+/g,'_')}.xlsx`);
   }
 
   // Carica dati CSV e inizializza
