@@ -102,7 +102,7 @@
   <input type="text" id="nomeCliente" placeholder="Nome Cliente" />
   <select id="categoriaFiltro"><option value="tutte">Tutte le categorie</option></select>
   <input type="text" id="cercaProdotto" placeholder="Cerca prodotto..." />
-  <button id="generaExcelBtn">Genera Excel</button>
+  <button id="generaPDFBtn">Genera PDF</button>
 </div>
 
 <table id="tabellaProdotti">
@@ -122,46 +122,39 @@
 
 <!-- PapaParse per parsing CSV -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<!-- SheetJS per generare Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- jsPDF per generare PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 (async () => {
+  const { jsPDF } = window.jspdf;
+
   const tabellaBody = document.querySelector('#tabellaProdotti tbody');
   const categoriaFiltro = document.getElementById('categoriaFiltro');
   const cercaProdotto = document.getElementById('cercaProdotto');
   const nomeCliente = document.getElementById('nomeCliente');
   const noteCliente = document.getElementById('noteCliente');
-  const generaExcelBtn = document.getElementById('generaExcelBtn');
+  const generaPDFBtn = document.getElementById('generaPDFBtn');
 
   let prodotti = [];
   let categorie = new Set();
 
-  // Carica CSV e ritorna array oggetti
+  // Funzione per caricare e parsare CSV
   function caricaCSV(url) {
     return new Promise((resolve, reject) => {
       Papa.parse(url, {
         download: true,
         header: true,
         skipEmptyLines: true,
-        complete: (results) => resolve(results.data),
+        complete: (results) => {
+          resolve(results.data);
+        },
         error: (err) => reject(err)
       });
     });
   }
 
-  // Popola filtro categorie
-  function popolaCategorie() {
-    categoriaFiltro.innerHTML = '<option value="tutte">Tutte le categorie</option>';
-    Array.from(categorie).sort().forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat.toLowerCase();
-      opt.textContent = cat;
-      categoriaFiltro.appendChild(opt);
-    });
-  }
-
-  // Mostra prodotti filtrando per categoria e ricerca
+  // Costruisce la tabella filtrando per categoria e ricerca
   function mostraProdotti() {
     const catSelezionata = categoriaFiltro.value.toLowerCase();
     const ricerca = cercaProdotto.value.toLowerCase();
@@ -169,7 +162,7 @@
     tabellaBody.innerHTML = '';
 
     prodotti.forEach(({ codice, descrizione, categoria, prezzo }) => {
-      if ((catSelezionata === 'tutte' || (categoria && categoria.toLowerCase() === catSelezionata)) &&
+      if ((catSelezionata === 'tutte' || categoria.toLowerCase() === catSelezionata) &&
           (descrizione.toLowerCase().includes(ricerca) || codice.toLowerCase().includes(ricerca))) {
 
         const riga = document.createElement('tr');
@@ -184,7 +177,7 @@
         tdDesc.textContent = descrizione;
         riga.appendChild(tdDesc);
 
-        // quantità input
+        // quantità con input e unità (pz/ct)
         const tdQty = document.createElement('td');
         const inputQty = document.createElement('input');
         inputQty.type = 'text';
@@ -194,7 +187,7 @@
         tdQty.appendChild(inputQty);
         riga.appendChild(tdQty);
 
-        // prezzo input
+        // prezzo con input
         const tdPrezzo = document.createElement('td');
         const inputPrezzo = document.createElement('input');
         inputPrezzo.type = 'text';
@@ -208,66 +201,96 @@
     });
   }
 
-  // Genera file Excel
-  function generaExcel() {
-    const wb = XLSX.utils.book_new();
+  // Popola filtro categorie
+  function popolaCategorie() {
+    categoriaFiltro.innerHTML = '<option value="tutte">Tutte le categorie</option>';
+    Array.from(categorie).sort().forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.toLowerCase();
+      opt.textContent = cat;
+      categoriaFiltro.appendChild(opt);
+    });
+  }
 
-    // Foglio dati ordine
-    const datiOrdine = [];
+  // Genera PDF
+  function generaPDF() {
+    const doc = new jsPDF();
+    let y = 10;
+    const margineX = 10;
+    const rigaAltezza = 10;
 
-    // Intestazione ordine
-    datiOrdine.push(["Ordine cliente"]);
-    datiOrdine.push(["Cliente:", nomeCliente.value.trim() || "(Non specificato)"]);
-    if (noteCliente.value.trim()) {
-      datiOrdine.push(["Note:", noteCliente.value.trim()]);
+    doc.setFont('Poppins', 'normal');
+    doc.setFontSize(16);
+    doc.setTextColor('#007BFF');
+    doc.text("Ordine cliente", margineX, y);
+    y += 10;
+
+    const cliente = nomeCliente.value.trim() || "(Non specificato)";
+    doc.setFontSize(12);
+    doc.setTextColor('#333');
+    doc.text("Cliente: " + cliente, margineX, y);
+    y += 10;
+
+    if(noteCliente.value.trim()){
+      doc.text("Note: " + noteCliente.value.trim(), margineX, y);
+      y += 10;
     }
-    datiOrdine.push([]); // riga vuota
-    datiOrdine.push(["Codice", "Descrizione", "Quantità", "Prezzo"]);
 
-    // Riga per ogni prodotto con quantità inserita
+    // Intestazione tabella
+    doc.setTextColor('#007BFF');
+    doc.text("Codice", margineX, y);
+    doc.text("Descrizione", margineX + 30, y);
+    doc.text("Quantità", margineX + 100, y);
+    doc.text("Prezzo", margineX + 140, y);
+    y += 8;
+
+    doc.setDrawColor('#FF7F00');
+    doc.setLineWidth(0.8);
+    doc.line(margineX, y, margineX + 180, y);
+    y += 5;
+
+    // Righe con dati
     const righe = tabellaBody.querySelectorAll('tr');
     righe.forEach(riga => {
       const cells = riga.querySelectorAll('td');
       const codice = cells[0].textContent;
       const descrizione = cells[1].textContent;
-      const qty = cells[2].querySelector('input').value.trim();
-      const prezzo = cells[3].querySelector('input').value.trim();
+      const qtyInput = cells[2].querySelector('input').value.trim();
+      const prezzoInput = cells[3].querySelector('input').value.trim();
 
-      if (qty) {
-        datiOrdine.push([
-          codice,
-          descrizione,
-          qty,
-          prezzo ? prezzo : "P.P."
-        ]);
+      if(qtyInput){
+        if (y > 280) { // Nuova pagina se troppo lunga
+          doc.addPage();
+          y = 10;
+        }
+        doc.setTextColor('#333');
+        doc.text(codice, margineX, y);
+        doc.text(descrizione, margineX + 30, y);
+        doc.text(qtyInput, margineX + 100, y);
+        doc.text(prezzoInput ? prezzoInput : "P.P.", margineX + 140, y);
+        y += rigaAltezza;
       }
     });
 
-    // Crea foglio e aggiungi a workbook
-    const ws = XLSX.utils.aoa_to_sheet(datiOrdine);
-    XLSX.utils.book_append_sheet(wb, ws, "Ordine");
-
-    // Scarica file
-    XLSX.writeFile(wb, `Ordine_${(nomeCliente.value.trim() || "cliente").replace(/\s+/g,'_')}.xlsx`);
+    doc.save(`Ordine_${cliente.replace(/\s+/g,'_')}.pdf`);
   }
 
-  // Carica dati CSV e inizializza
+  // Carica CSV e inizializza
   prodotti = await caricaCSV('catalogo.csv');
 
-  // Prendi categorie uniche
+  // Ottieni tutte le categorie
   prodotti.forEach(p => {
-    if (p.categoria && p.categoria.trim() !== '') {
+    if(p.categoria && p.categoria.trim() !== '') {
       categorie.add(p.categoria.trim());
     }
   });
-
   popolaCategorie();
   mostraProdotti();
 
   // Eventi
   categoriaFiltro.addEventListener('change', mostraProdotti);
   cercaProdotto.addEventListener('input', mostraProdotti);
-  generaExcelBtn.addEventListener('click', generaExcel);
+  generaPDFBtn.addEventListener('click', generaPDF);
 
 })();
 </script>
