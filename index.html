@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Catalogo Ordini</title>
-  <!-- Font Poppins da Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
   <style>
     body {
@@ -31,15 +30,6 @@
     input[type=text] {
       flex: 1 1 200px;
     }
-    select {
-      background: white;
-      color: #333;
-    }
-    textarea {
-      width: 100%;
-      min-height: 60px;
-      margin-top: 10px;
-    }
     button {
       background-color: #FF7F00;
       border: none;
@@ -52,10 +42,7 @@
       transition: background-color 0.3s;
     }
     button:hover {
-      background-color: #e66e00;
-    }
-    button.secondary {
-      background-color: #007BFF;
+      background-color: #e06600;
     }
     table {
       width: 100%;
@@ -86,9 +73,6 @@
       input[type=text], select, button {
         flex: none;
         width: 100%;
-      }
-      table, th, td {
-        font-size: 0.9rem;
       }
     }
   </style>
@@ -121,11 +105,9 @@
 <label for="noteCliente">Note ordine:</label>
 <textarea id="noteCliente" placeholder="Inserisci eventuali note..."></textarea>
 
-<!-- Librerie necessarie -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
 (async () => {
@@ -134,9 +116,9 @@
   const cercaProdotto = document.getElementById('cercaProdotto');
   const nomeCliente = document.getElementById('nomeCliente');
   const noteCliente = document.getElementById('noteCliente');
+  const aggiungiArticoloBtn = document.getElementById('aggiungiArticoloBtn');
   const generaExcelBtn = document.getElementById('generaExcelBtn');
   const generaPdfBtn = document.getElementById('generaPdfBtn');
-  const aggiungiArticoloBtn = document.getElementById('aggiungiArticoloBtn');
 
   let prodotti = [];
   let categorie = new Set();
@@ -156,37 +138,20 @@
   function mostraProdotti() {
     const catSelezionata = categoriaFiltro.value.toLowerCase();
     const ricerca = cercaProdotto.value.toLowerCase();
-    tabellaBody.innerHTML = '';
+    tabellaBody.querySelectorAll('tr[data-source="csv"]').forEach(r => r.remove());
 
     prodotti.forEach(({ codice, descrizione, categoria, prezzo }) => {
       if ((catSelezionata === 'tutte' || categoria.toLowerCase() === catSelezionata) &&
           (descrizione.toLowerCase().includes(ricerca) || codice.toLowerCase().includes(ricerca))) {
         const riga = document.createElement('tr');
+        riga.dataset.source = "csv";
 
-        const tdCodice = document.createElement('td');
-        tdCodice.textContent = codice;
-        riga.appendChild(tdCodice);
-
-        const tdDesc = document.createElement('td');
-        tdDesc.textContent = descrizione;
-        riga.appendChild(tdDesc);
-
-        const tdQty = document.createElement('td');
-        const inputQty = document.createElement('input');
-        inputQty.type = 'text';
-        inputQty.placeholder = '0 pz/ct';
-        inputQty.className = 'qty-input';
-        inputQty.pattern = "\\d+\\s?(pz|ct)?";
-        tdQty.appendChild(inputQty);
-        riga.appendChild(tdQty);
-
-        const tdPrezzo = document.createElement('td');
-        const inputPrezzo = document.createElement('input');
-        inputPrezzo.type = 'text';
-        inputPrezzo.placeholder = prezzo ? prezzo : 'P.P.';
-        inputPrezzo.className = 'price-input';
-        tdPrezzo.appendChild(inputPrezzo);
-        riga.appendChild(tdPrezzo);
+        riga.innerHTML = `
+          <td>${codice}</td>
+          <td>${descrizione}</td>
+          <td><input type="text" placeholder="CT" class="qty-input"></td>
+          <td><input type="text" placeholder="${prezzo || 'P.P.'}" class="price-input"></td>
+        `;
 
         tabellaBody.appendChild(riga);
       }
@@ -203,40 +168,18 @@
     });
   }
 
-  function aggiungiArticolo() {
+  function aggiungiRigaVuota() {
     const riga = document.createElement('tr');
+    riga.dataset.source = "manuale";
 
-    const tdCodice = document.createElement('td');
-    const inputCodice = document.createElement('input');
-    inputCodice.type = 'text';
-    inputCodice.placeholder = 'Codice';
-    tdCodice.appendChild(inputCodice);
-    riga.appendChild(tdCodice);
+    riga.innerHTML = `
+      <td><input type="text" placeholder="Codice"></td>
+      <td><input type="text" placeholder="Descrizione"></td>
+      <td><input type="text" placeholder="CT" class="qty-input"></td>
+      <td><input type="text" placeholder="P.P." class="price-input"></td>
+    `;
 
-    const tdDesc = document.createElement('td');
-    const inputDesc = document.createElement('input');
-    inputDesc.type = 'text';
-    inputDesc.placeholder = 'Descrizione';
-    tdDesc.appendChild(inputDesc);
-    riga.appendChild(tdDesc);
-
-    const tdQty = document.createElement('td');
-    const inputQty = document.createElement('input');
-    inputQty.type = 'text';
-    inputQty.placeholder = '0 pz/ct';
-    inputQty.className = 'qty-input';
-    tdQty.appendChild(inputQty);
-    riga.appendChild(tdQty);
-
-    const tdPrezzo = document.createElement('td');
-    const inputPrezzo = document.createElement('input');
-    inputPrezzo.type = 'text';
-    inputPrezzo.placeholder = 'P.P.';
-    inputPrezzo.className = 'price-input';
-    tdPrezzo.appendChild(inputPrezzo);
-    riga.appendChild(tdPrezzo);
-
-    tabellaBody.insertBefore(riga, tabellaBody.firstChild);
+    tabellaBody.prepend(riga);
   }
 
   function generaExcel() {
@@ -249,14 +192,78 @@
     dati.push([]);
     dati.push(["Codice", "Descrizione", "Quantità", "Prezzo"]);
 
-    const righe = tabellaBody.querySelectorAll('tr');
-    righe.forEach(riga => {
-      const cells = riga.querySelectorAll('td');
-      const codice = cells[0].querySelector('input') ? cells[0].querySelector('input').value.trim() : cells[0].textContent.trim();
-      const descrizione = cells[1].querySelector('input') ? cells[1].querySelector('input').value.trim() : cells[1].textContent.trim();
-      const qtyInput = cells[2].querySelector('input');
-      const qty = qtyInput && qtyInput.value.trim() ? qtyInput.value.trim() : 'CT';
-      const prezzoInput = cells[3].querySelector('input');
-      const prezzo = prezzoInput && prezzoInput.value.trim() ? prezzoInput.value.trim() : 'P.P.';
+    tabellaBody.querySelectorAll('tr').forEach(riga => {
+      const celle = riga.querySelectorAll('td');
+      const codice = celle[0].querySelector('input')?.value || celle[0].textContent.trim();
+      const descrizione = celle[1].querySelector('input')?.value || celle[1].textContent.trim();
+      const qty = celle[2].querySelector('input').value.trim();
+      const prezzo = celle[3].querySelector('input').value.trim() || 'P.P.';
 
-      dati.push0
+      if (qty) {
+        dati.push([codice, descrizione, qty, prezzo]);
+      }
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(dati);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ordine");
+
+    XLSX.writeFile(wb, `Ordine_${cliente.replace(/\s+/g, '_')}.xlsx`);
+  }
+
+  function generaPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 10;
+
+    doc.setFontSize(14);
+    doc.text(`Ordine Cliente: ${nomeCliente.value || "(Non specificato)"}`, 10, y);
+    y += 10;
+    if (noteCliente.value.trim()) {
+      doc.setFontSize(12);
+      doc.text(`Note: ${noteCliente.value}`, 10, y);
+      y += 10;
+    }
+
+    doc.setFontSize(12);
+    doc.text("Codice - Descrizione - Quantità - Prezzo", 10, y);
+    y += 8;
+
+    tabellaBody.querySelectorAll('tr').forEach(riga => {
+      const celle = riga.querySelectorAll('td');
+      const codice = celle[0].querySelector('input')?.value || celle[0].textContent.trim();
+      const descrizione = celle[1].querySelector('input')?.value || celle[1].textContent.trim();
+      const qty = celle[2].querySelector('input').value.trim();
+      const prezzo = celle[3].querySelector('input').value.trim() || 'P.P.';
+
+      if (qty) {
+        const rigaTesto = `${codice} - ${descrizione} - ${qty} - ${prezzo}`;
+        doc.text(rigaTesto, 10, y);
+        y += 8;
+      }
+    });
+
+    doc.save(`Ordine_${(nomeCliente.value || "cliente").replace(/\s+/g, '_')}.pdf`);
+  }
+
+  // Eventi
+  categoriaFiltro.addEventListener('change', mostraProdotti);
+  cercaProdotto.addEventListener('input', mostraProdotti);
+  aggiungiArticoloBtn.addEventListener('click', aggiungiRigaVuota);
+  generaExcelBtn.addEventListener('click', generaExcel);
+  generaPdfBtn.addEventListener('click', generaPDF);
+
+  // Carica catalogo
+  prodotti = await caricaCSV('catalogo.csv');
+  prodotti.forEach(p => {
+    if (p.categoria && p.categoria.trim() !== '') {
+      categorie.add(p.categoria.trim());
+    }
+  });
+  popolaCategorie();
+  mostraProdotti();
+})();
+</script>
+
+</body>
+</html>
